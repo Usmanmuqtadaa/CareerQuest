@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'password'); // Allow non-verified for password if needed, but primary is Google
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users Collection
+    match /users/{uid} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+               data.uid is string && data.uid.size() <= 128 &&
+               data.email is string && data.email.size() <= 128 &&
+               data.role in ['user', 'admin'] &&
+               data.createdAt is timestamp;
+      }
+
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(uid) && isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'user' || (request.auth.token.email.lower() == 'usman.muqtada1@gmail.com' && request.resource.data.role == 'admin'));
+      
+      allow update: if (
+        (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'role']) &&
+         (request.resource.data.role == resource.data.role || (request.auth.token.email.lower() == 'usman.muqtada1@gmail.com' && request.resource.data.role == 'admin')) &&
+         (request.resource.data.displayName == null || request.resource.data.displayName.size() <= 100)) ||
+        isAdmin()
+      );
+    }
+
+    // Quiz Responses
+    match /quizResponses/{responseId} {
+      function isValidResponse(data) {
+        return data.keys().hasAll(['userId', 'userName', 'userEmail', 'answers', 'analysis', 'timestamp']) &&
+               data.userId is string &&
+               data.answers is list &&
+               data.analysis is list &&
+               data.timestamp is timestamp;
+      }
+
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && isValidResponse(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Logs
+    match /logs/{logId} {
+      allow create: if isSignedIn(); // Allow apps to log events
+      allow read, list: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}

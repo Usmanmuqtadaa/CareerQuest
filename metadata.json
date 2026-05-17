@@ -1,0 +1,6 @@
+{
+  "name": "CareerQuest AI",
+  "description": "An AI-powered career orientation platform that uses smart quizzes to discover your interests and match them with high-growth employment fields.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

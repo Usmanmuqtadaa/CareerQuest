@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Extended user profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "QuizResponse": {
+      "title": "Quiz Response",
+      "description": "User quiz answers and AI analysis",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "answers": { "type": "array", "items": { "type": "object" } },
+        "analysis": { "type": "array", "items": { "type": "object" } },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "answers", "analysis", "timestamp"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Security and usage logs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/quizResponses/{responseId}": {
+      "schema": "QuizResponse",
+      "description": "User interest quiz results"
+    },
+    "/logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Platform activity logging"
+    }
+  }
+}
